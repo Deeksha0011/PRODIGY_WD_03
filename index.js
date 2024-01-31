@@ -1,124 +1,89 @@
-window.addEventListener('DOMContentLoaded', () => {
-    const tiles = Array.from(document.querySelectorAll('.tile'));
-    const playerDisplay = document.querySelector('.display-player');
-    const resetButton = document.querySelector('#reset');
-    const announcer = document.querySelector('.announcer');
+const X_CLASS = 'x'
+const CIRCLE_CLASS = 'circle'
+const WINNING_COMBINATIONS = [
+  [0, 1, 2],
+  [3, 4, 5],
+  [6, 7, 8],
+  [0, 3, 6],
+  [1, 4, 7],
+  [2, 5, 8],
+  [0, 4, 8],
+  [2, 4, 6]
+]
+const cellElements = document.querySelectorAll('[data-cell]')
+const board = document.getElementById('board')
+const winningMessageElement = document.getElementById('winningMessage')
+const restartButton = document.getElementById('restartButton')
+const winningMessageTextElement = document.querySelector('[data-winning-message-text]')
 
-    let board = ['', '', '', '', '', '', '', '', ''];
-    let currentPlayer = 'X';
-    let isGameActive = true;
+let circleTurn
+startGame()
 
-    const PLAYERX_WON = 'PLAYERX_WON';
-    const PLAYERO_WON = 'PLAYERO_WON';
-    const TIE = 'TIE';
+restartButton.addEventListener('click', startGame)
 
+function startGame() {
+  circleTurn = false
+  cellElements.forEach(cell => {
+    cell.classList.remove(X_CLASS)
+    cell.classList.remove(CIRCLE_CLASS)
+    cell.removeEventListener('click', handleClick)
+    cell.addEventListener('click', handleClick, { once: true })
+  })
+  setBoardHoverClass()
+  winningMessageElement.classList.remove('show')
+}
 
-    /*
-        Indexes within the board
-        [0] [1] [2]
-        [3] [4] [5]
-        [6] [7] [8]
-    */
+function handleClick(e) {
+  const cell = e.target
+  const currentClass = circleTurn ? CIRCLE_CLASS : X_CLASS
+  placeMark(cell, currentClass)
+  if (checkWin(currentClass)) {
+    endGame(false)
+  } else if (isDraw()) {
+    endGame(true)
+  } else {
+    swapTurns()
+    setBoardHoverClass()
+  }
+}
 
-    const winningConditions = [
-        [0, 1, 2],
-        [3, 4, 5],
-        [6, 7, 8],
-        [0, 3, 6],
-        [1, 4, 7],
-        [2, 5, 8],
-        [0, 4, 8],
-        [2, 4, 6]
-    ];
+function endGame(draw) {
+  if (draw) {
+    winningMessageTextElement.innerText = 'Draw!'
+  } else {
+    winningMessageTextElement.innerText = `${circleTurn ? "O's" : "X's"} Wins!`
+  }
+  winningMessageElement.classList.add('show')
+}
 
-    function handleResultValidation() {
-        let roundWon = false;
-        for (let i = 0; i <= 7; i++) {
-            const winCondition = winningConditions[i];
-            const a = board[winCondition[0]];
-            const b = board[winCondition[1]];
-            const c = board[winCondition[2]];
-            if (a === '' || b === '' || c === '') {
-                continue;
-            }
-            if (a === b && b === c) {
-                roundWon = true;
-                break;
-            }
-        }
+function isDraw() {
+  return [...cellElements].every(cell => {
+    return cell.classList.contains(X_CLASS) || cell.classList.contains(CIRCLE_CLASS)
+  })
+}
 
-    if (roundWon) {
-            announce(currentPlayer === 'X' ? PLAYERX_WON : PLAYERO_WON);
-            isGameActive = false;
-            return;
-        }
+function placeMark(cell, currentClass) {
+  cell.classList.add(currentClass)
+}
 
-    if (!board.includes(''))
-        announce(TIE);
-    }
+function swapTurns() {
+  circleTurn = !circleTurn
+}
 
-    const announce = (type) => {
-        switch(type){
-            case PLAYERO_WON:
-                announcer.innerHTML = 'Player <span class="playerO">O</span> Won';
-                break;
-            case PLAYERX_WON:
-                announcer.innerHTML = 'Player <span class="playerX">X</span> Won';
-                break;
-            case TIE:
-                announcer.innerText = 'Tie';
-        }
-        announcer.classList.remove('hide');
-    };
+function setBoardHoverClass() {
+  board.classList.remove(X_CLASS)
+  board.classList.remove(CIRCLE_CLASS)
+  if (circleTurn) {
+    board.classList.add(CIRCLE_CLASS)
+  } else {
+    board.classList.add(X_CLASS)
+  }
+}
 
-    const isValidAction = (tile) => {
-        if (tile.innerText === 'X' || tile.innerText === 'O'){
-            return false;
-        }
-
-        return true;
-    };
-
-    const updateBoard =  (index) => {
-        board[index] = currentPlayer;
-    }
-
-    const changePlayer = () => {
-        playerDisplay.classList.remove(`player${currentPlayer}`);
-        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-        playerDisplay.innerText = currentPlayer;
-        playerDisplay.classList.add(`player${currentPlayer}`);
-    }
-
-    const userAction = (tile, index) => {
-        if(isValidAction(tile) && isGameActive) {
-            tile.innerText = currentPlayer;
-            tile.classList.add(`player${currentPlayer}`);
-            updateBoard(index);
-            handleResultValidation();
-            changePlayer();
-        }
-    }
-    
-    const resetBoard = () => {
-        board = ['', '', '', '', '', '', '', '', ''];
-        isGameActive = true;
-        announcer.classList.add('hide');
-
-        if (currentPlayer === 'O') {
-            changePlayer();
-        }
-
-        tiles.forEach(tile => {
-            tile.innerText = '';
-            tile.classList.remove('playerX');
-            tile.classList.remove('playerO');
-        });
-    }
-
-    tiles.forEach( (tile, index) => {
-        tile.addEventListener('click', () => userAction(tile, index));
-    });
-
-    resetButton.addEventListener('click', resetBoard);
-});
+function checkWin(currentClass) {
+  return WINNING_COMBINATIONS.some(combination => {
+    return combination.every(index => {
+      return cellElements[index].classList.contains(currentClass)
+    })
+  })
+} 
